@@ -1,4 +1,4 @@
-# autowalk
+# AutoWalk
 Configurable tool of bulking build path for AutoJump and Ranger.
 There are `2` main usage you can choose:
 - 🚀 **[ranger](https://github.com/ranger/ranger)** users: you can bulk build jump remap strings for your file system directories that you had set in autowalk configuration file.
@@ -55,7 +55,22 @@ For convenience, command:  `aw`:
 ```shell
 aw -h
 ```
+### you can see help 
+<a title="help">
+  <img src="https://github.com/linusic/autowalk/blob/main/examples/0-autowalk-help.gif" width="600">
+</a>
 
-<a title="help" href="">
-  <img src="https://i.imgur.com/vtG8olE.png](https://github.com/linusic/autowalk/blob/main/examples/0-autowalk-help.gif" width="640">
+### you can see configuration file
+<a title="configuration">
+  <img src="https://github.com/linusic/autowalk/blob/main/examples/1-autowalk-config.png" width="600">
+</a>
+
+### you can see AutoJump
+<a title="AutoJump">
+  <img src="https://github.com/linusic/autowalk/blob/main/examples/2-1-bulk-add-weight-for-autojump.gif" width="600">
+</a>
+
+### you can see Ranger
+<a title="Ranger">
+  <img src="https://github.com/linusic/autowalk/blob/main/examples/2-2-bulk-generate-remap-for-ranger.gif" width="600">
 </a>
