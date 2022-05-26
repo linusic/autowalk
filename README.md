@@ -7,7 +7,7 @@ There are `2` main usage you can choose:
 ## Requirements
 You need to have the following:
 - 🔥 **Python3.6 +**
-- 🚀 **[autojump](https://github.com/wting/autojump)** (Optional: If you only use Ranger to generate remap, you don't need to install it).
+- 🚀 **[autojump](https://github.com/wting/autojump)** (Optional: If you only use Ranger to generate remap, don't need to install it).
 
 ## Installing
 [🚀PyPI => AutoWalk ](https://pypi.org/project/autowalk/): 
@@ -34,8 +34,7 @@ xxx = [
 ]
 ```
 
-`~/.autowalk.py` is global config, and shared by Ranger options and Autojump options
-and you can set below:
+`~/.autowalk.py` is global config shared by Ranger and Autojump, you can set below:
 
 - Common Configuration Option:
   - `recursion_root_list`: your filesystem paths that you want to add weights / remap
