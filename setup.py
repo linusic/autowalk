@@ -5,7 +5,7 @@ with open("autowalk/README.md", "r") as f:
 
 setup(
     name='autowalk',
-    version="1.1",
+    version="1.2.0",
     author="linusic",
     author_email='cython_lin@cklin.top',
     description="Configurable tool of bulking build path for AutoJump and Ranger",
