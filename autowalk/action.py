@@ -1,6 +1,6 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
-import re
+import re, sys
 import argparse
 import subprocess as sp
 from pathlib import Path
@@ -63,10 +63,11 @@ class BaseAction(argparse.Action):
             if path.exists():
                 return path
             else:
-                print(C.red("[AutoJump or File Not Found]"))
+                Path(path).resolve().touch()
+                print(C.red("[File Not Found]"))
                 notice = f"{C.purple(str(path))}"
-                print(C.red(f"\t check your autojump config file: {notice}"))
-                exit(-1)
+                print(C.green(f"\t Created It: {notice}"))
+                return path
         else:
             return path
 
@@ -143,28 +144,8 @@ class BaseAction(argparse.Action):
                 except PermissionError:
                     ...
 
-    def check_autojump_install(self, cmd_str):
-        try:
-            result = sp.run(
-                cmd_str,
-                stdout=sp.PIPE,
-                stderr=sp.PIPE,
-                shell=True, 
-                # change the output of stderr and stdout from bytes to string
-                universal_newlines=True, 
-                # and must disabled encoding="utf-8" avoid coding err that can't try handle
-                # encoding="utf-8",    
-                check=True,
-            )
-            return result
-        except:
-            print(C.red("[AutoJump Not Found]"))
-            notice = f"{C.purple('autojump')}"
-            print(C.red(f"\t the option is for: {notice}, had you installed it?"))
-            exit(-1)
-
     def generate(self):
-        path_obj_list = [Path(d) for d in CONFIG.GLOBAL_CONFIG.recursion_root_list]
+        path_obj_list = [Path(d).resolve() for d in CONFIG.GLOBAL_CONFIG.recursion_root_list]
         self._generate(path_obj_list, depth=0)
 
     def append_default_and_print(self,):
@@ -176,14 +157,10 @@ class BaseAction(argparse.Action):
     def append_default_and_to_file(self,):
         self.map_dict.update({}.fromkeys(CONFIG.GLOBAL_CONFIG.default_map_only_for_ranger))
         ranger_path = self._check_ranger_config()
-        ranger_path.write_text( "\n".join(self.map_dict.keys())+"\n")
+        ranger_path.write_text( "\n".join(self.map_dict.keys())+"\n",encoding="utf-8")
         print(C.purple("[Write Completed]"))
         info = C.green(f"cat {ranger_path}")
         print(C.purple(f'\tcheck it: {info}'))
-
-class CatConfigFile(BaseAction):
-    def _common_action(self):
-        print((Path.home() / ".autowalk.py").read_text())
 
 class RemoveConfigAction(BaseAction):
     def _common_action(self):
@@ -222,75 +199,21 @@ class RangerPinFileAction(BaseAction):
         self.append_default_and_to_file()
 
 
-
-
 class JumpBase(BaseAction):
     def _common_action(self):
         self.generate()
-
-        # if self._async:
-        #     # import asyncio
-        #     # from multiprocessing import cpu_count
-        #     # from concurrent.futures import ThreadPoolExecutor
-        #     # async def async_run(async_cmd):
-        #     #     await asyncio.create_subprocess_shell(async_cmd,stdout=asyncio.subprocess.PIPE,stderr=asyncio.subprocess.PIPE)     
-        #     # async def main():
-        #     #     async_run_list = [] 
-        #     #     for file in self.dirs_list:
-        #     #         auto_jump_cmd = f'cd "{file}" && autojump -a "{file}" && autojump -i {CONFIG.GLOBAL_CONFIG.weight_value_only_for_autojump[0]}'
-        #     #         async_run_list.append( async_run(auto_jump_cmd) )
-        #     #     await asyncio.gather( *async_run_list )
-        #     # asyncio.run(main())
-        #     ###############################################################
-        #     # loop = asyncio.get_event_loop()
-        #     # executor = ThreadPoolExecutor( cpu_count() )
-        #     # loop.set_default_executor(executor)
-        #     # asyncio.get_event_loop().run_until_complete(main())
-        #     # executor.shutdown(wait=True)
-        #     # loop.close()
-        #     ###############################################################
-        #     # for _ in range(epoch):
-        #     # for file in self.dirs_list:
-        #     #     auto_jump_cmd = f'cd "{file}" && autojump -a "{file}" && autojump -i {CONFIG.GLOBAL_CONFIG.weight_value_only_for_autojump[0]}'
-        #     #     sp.Popen(auto_jump_cmd,stdout=sp.PIPE,stderr=sp.PIPE,shell=True, encoding="utf-8")
-
-        #     autojump_config_path = self._check_autojump_config()
-        #     max_epoch = 5
-        #     raw_set = set(self.dirs_list)
-
-        #     for x in range(max_epoch):
-        #         if not raw_set:
-        #             break
-
-        #         print(len(raw_set))
-        #         # print(raw_set)
-        #         for file in raw_set:
-        #             auto_jump_cmd = f'cd "{file}" && autojump -a "{file}" && autojump -i {CONFIG.GLOBAL_CONFIG.weight_value_only_for_autojump[0]}'
-        #             sp.Popen(auto_jump_cmd,stdout=sp.PIPE,stderr=sp.PIPE,shell=True, encoding="utf-8")
-
-        #         with autojump_config_path.open() as f:
-        #             raw_set -= {line.strip().split("\t")[1].strip() for line in set(f)}
-
-        # else:
-        #     for file in self.dirs_list:
-        #         auto_jump_cmd = f'cd "{file}" && autojump -a "{file}" && autojump -i {CONFIG.GLOBAL_CONFIG.weight_value_only_for_autojump[0]}'
-
-
-        #         result = sp.run(auto_jump_cmd,stdout=sp.PIPE,stderr=sp.PIPE,shell=True, encoding="utf-8")
-        #         weight_filename = result.stdout.strip().split(":",1)
-
-        #         final_print = f'\t{C.green(weight_filename[0])}{C.red(":")}{C.purple(weight_filename[1])}'
-        #         print(final_print)
 
         aj_cnofig_path = self._check_autojump_config()
         dirs_set = set(self.dirs_list)
         user_define_weight = CONFIG.GLOBAL_CONFIG.weight_value_only_for_autojump[0]
 
-        old_conf = aj_cnofig_path.read_text().strip()
+        old_conf = aj_cnofig_path.read_text(encoding="utf-8").strip()
         old_file_name_set = set()
 
+
+
         if not old_conf:
-            aj_cnofig_path.write_text( "\n".join( f"{user_define_weight}\t{path_obj}" for path_obj in dirs_set)+"\n" )
+            aj_cnofig_path.write_text( "\n".join( f"{user_define_weight}\t{path_obj}" for path_obj in dirs_set)+"\n" ,encoding="utf-8")
         else:
             old_config_update_set = set()
             for line in old_conf.split("\n"):
@@ -302,60 +225,23 @@ class JumpBase(BaseAction):
             new_config_update_set = {f"{user_define_weight}\t{diff_name}" for diff_name in dirs_set - old_file_name_set}
 
             new_total_config = {*old_config_update_set,*new_config_update_set}
-            aj_cnofig_path.write_text( "\n".join( new_total_config ) + "\n")
+            aj_cnofig_path.write_text( "\n".join( new_total_config ) + "\n",encoding="utf-8")
 
-        print(C.purple("[Completed]"))
         print(C.purple(f'\tUse {C.green("aw -l")} to check show your weights'))
         print()
 
 
-# class JumpSyncAction(JumpBase):
-#     def _common_action(self):
-#         self._async = False
-#         super()._common_action()
-
-# class JumpAsyncAction(JumpBase):
-#     def _common_action(self):
-#         self._async = True
-#         super()._common_action()
-
-
 class JumpListAction(JumpBase):
     def _common_action(self):
-        auto_jump_cmd = "autojump -s"
-        result = self.check_autojump_install(auto_jump_cmd)
-
-        line_list = result.stdout.split("\n")
-        print()
-
-        mark = True
-        for line in line_list:
-            split_list = line.split(":",1)
-            if len(split_list) > 1 and mark:
-                print(f'\t\t{C.green(split_list[0])} {C.red("│".rjust(10-len(split_list[0])))}{C.purple(split_list[1].strip())}')
-            else:
-                mark = False
-                if not split_list[0].strip():
-                    pass
-                elif "_" in split_list[0]:
-                    print("\t" + C.red( int(len(split_list[0])/1.6) * "──" ))
-                elif len(split_list) == 1:
-                    print(C.green("\t"+line))
-                else :
-                    print(f'\t{C.purple(split_list[0])}{C.red("│".rjust(10-len(split_list[0])))}{C.green(split_list[1].strip())}')
-
-        print()
+        sp.run("autojump -s", stderr=sp.PIPE,shell=True, universal_newlines=True)
 
 class JumpClearAction(JumpBase):
     def find_autojump_config(self,):
-        auto_jump_cmd = "autojump -s"
-        result = self.check_autojump_install(auto_jump_cmd)
-        result = result.stdout.split("\n")
+        result = sp.run("autojump -s",stdout=sp.PIPE,stderr=sp.PIPE,shell=True, universal_newlines=True).stdout.split("\n")
         autojump_config_path = self._check_autojump_config()
 
-        print(C.purple("[Cleared]"))
         if Path(autojump_config_path).exists():
-            autojump_config_path.write_text("")
+            autojump_config_path.write_text("",encoding="utf-8")
             cmd_str = C.green(f"cat {autojump_config_path}")
             cmd_str2 = C.green(f"aw -l")
             print(C.purple(f'\tUse command {cmd_str2} or {cmd_str} to check'))
@@ -363,7 +249,7 @@ class JumpClearAction(JumpBase):
         else:
             try:
                 p2 = Path(result[-2].split(":")[1].strip())
-                p2.write_text("")
+                p2.write_text("",encoding="utf-8")
                 cmd_str = C.green(f"cat {p2}")
                 cmd_str2 = C.green(f"aw -l")
                 print(C.purple(f'\tUse command {cmd_str2} or {cmd_str} to check'))
@@ -372,20 +258,21 @@ class JumpClearAction(JumpBase):
                 print(C.red("No Config File Find !"))
 
     def _common_action(self):
+        print(C.purple("[Cleared]"))
         self.find_autojump_config()
 
 
 class JumpJunkCleanAction(JumpBase):
     def _common_action(self):
+        print(C.purple("[Cleaned Junk]"))
+
         try:
             autojump_config_path = self._check_autojump_config()
             
             with autojump_config_path.open() as f_before:
                 before_clean_line_set = set(f_before)
 
-            auto_jump_cmd = "autojump --purge"
-            self.check_autojump_install(auto_jump_cmd)
-            print(C.purple("[Cleaned Junk]"))    
+            sp.run("autojump --purge",stdout=sp.PIPE,stderr=sp.PIPE,shell=True, universal_newlines=True).stdout
 
             with autojump_config_path.open() as f_after:
                 after_clean_line_set = set(f_after)
@@ -405,49 +292,47 @@ class JumpJunkCleanAction(JumpBase):
                 print(f'\t{C.purple("total cleaned")}{C.red("│")} {C.green(count)}')
                 print(f'\t{C.purple("weight config")}{C.red("│")} {C.green(autojump_config_path.resolve())}')
         except:
-            auto_jump_cmd = "autojump --purge"
-            result = self.check_autojump_install(auto_jump_cmd)
-            print("\t"+C.purple(result.stdout))
+            print("\t"+C.purple(sp.run("autojump --purge",stdout=sp.PIPE,stderr=sp.PIPE,shell=True, universal_newlines=True).stdout))
 
 
-class BaseArgsCommon:
-    def check_autojump_install_for_args_action(self, *args, **kwargs):
-        input_path_name = ""
+class JumpCatConfigFile(BaseAction):
+    def _common_action(self):
+        print((Path.home() / ".autowalk.py").read_text(encoding="utf-8"))
+
+
+
+class IncrWeightAction(argparse._StoreAction):
+    def __call__(self, parser, args, values, option_string=None):
         try:
-            input_path_name = kwargs["file"] 
-            auto_jump_cmd = args[0]
-            result = sp.run(
-                auto_jump_cmd,
-                stdout=sp.PIPE,
-                stderr=sp.PIPE,
-                shell=True, 
-                # change the output of stderr and stdout from bytes to string
-                universal_newlines=True, 
-                # and must disabled encoding="utf-8" avoid coding err that can't try handle
-                # encoding="utf-8",    
-                check=True,
-            )
+            file, weight = values
+            
+            _cd = "cd /D" if "win" in sys.platform else "cd"
 
+            auto_jump_cmd = f'{_cd} "{file}" && autojump -a "{file}" && autojump -i {weight}'
+            result = sp.run(auto_jump_cmd,stdout=sp.PIPE,stderr=sp.PIPE,shell=True, universal_newlines=True)
             weight_filename = result.stdout.strip().split(":",1)
+
             final_print = f'\t{C.green(weight_filename[0])}{C.red(":")}{C.purple(weight_filename[1])}'
             print(C.purple("[INCR COMPLETED]"))
             print(final_print)
             print()
         except:
-            print(C.red("[AutoJump or Directory Not Found]"))
-            notice = C.purple( "autojump" )
-            print(C.red(f"\t 1. the option is for: { notice }, had you installed it?"))
-            print(C.red(f"\t 2. check your input path: {C.purple(input_path_name)}"))
-            # parser.print_help()
+            parser.print_help()
 
-class IncrWeightAction(argparse._StoreAction, BaseArgsCommon):
+
+class DecrWeightAction(argparse._StoreAction):
     def __call__(self, parser, args, values, option_string=None):
-        file, weight = values
-        auto_jump_cmd = f'cd "{file}" && autojump -a "{file}" && autojump -i {weight}'
-        self.check_autojump_install_for_args_action(auto_jump_cmd, file=file)
+        try:
+            file, weight = values
+            _cd = "cd /D" if "win" in sys.platform else "cd"
 
-class DecrWeightAction(argparse._StoreAction, BaseArgsCommon):
-    def __call__(self, parser, args, values, option_string=None):    
-        file, weight = values
-        auto_jump_cmd = f'cd "{file}" && autojump -a "{file}" && autojump -d {weight}'
-        self.check_autojump_install_for_args_action(auto_jump_cmd, file=file)
+            auto_jump_cmd = f'{_cd} "{file}" && autojump -a "{file}" && autojump -d {weight}'
+            result = sp.run(auto_jump_cmd,stdout=sp.PIPE,stderr=sp.PIPE,shell=True, universal_newlines=True)
+            weight_filename = result.stdout.strip().split(":",1)
+
+            final_print = f'\t{C.green(weight_filename[0])}{C.red(":")}{C.purple(weight_filename[1])}'
+            print(C.purple("[DECR COMPLETED]"))
+            print(final_print)
+            print()
+        except:
+            parser.print_help()
