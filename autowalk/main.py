@@ -8,7 +8,7 @@ import argparse
 import textwrap
 
 from utils.color import C
-from config import CONFIG
+from config import Config
 from formatter import IndentHelpFormator
 from action import (
     JumpBase,
@@ -22,14 +22,13 @@ from action import (
     JumpClearAction, 
     JumpListAction,
     JumpJunkCleanAction,
-    CatConfigFile,
+    JumpCatConfigFile,
     IncrWeightAction,
     DecrWeightAction
 )
 
 
 def main():
-    CONFIG.make_config_dict()
     parser = argparse.ArgumentParser(
         # prefix_chars="-",
         add_help=False,
@@ -52,7 +51,7 @@ def main():
 
     # Global
     parser.add_argument('-h',  action='help',help=f'{C.green("│ GEN  Conf: ")}{C.purple("~/.autowalk.py")}')
-    parser.add_argument('-v',  action=CatConfigFile,help=C.green(f'│ VIEW Conf: {C.purple("~/.autowalk.py")}'))
+    parser.add_argument('-v',  action=JumpCatConfigFile,help=C.green(f'│ VIEW Conf: {C.purple("~/.autowalk.py")}'))
     parser.add_argument('-r',  action=RemoveConfigAction,help=C.red( f'│ RM   Conf: {C.purple("~/.autowalk.py")}'))
     # For Ranger
     parser.add_argument('-m',  action=RangerAction,help=C.green("│ GEN & PRINT   For  Ranger"))
