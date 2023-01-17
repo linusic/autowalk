@@ -1,15 +1,18 @@
 #!/usr/bin/env python
 
-import re, sys
+import sys
 import argparse
 import subprocess as sp
 from pathlib import Path
 from importlib import  import_module
 
 from utils.color import C
-from config import CONFIG
+from config import Config
+
 
 class BaseAction(argparse.Action):
+    CONFIG = Config().make_config_dict()
+
     def __init__(self,
                  option_strings,
                  dest=argparse.SUPPRESS,
@@ -41,12 +44,12 @@ class BaseAction(argparse.Action):
 
 
     def _judge_prefix(self,t_dir):
-        return  sum ( str( t_dir.name ).startswith(p) for p in CONFIG.GLOBAL_CONFIG.black_list_dirname_prefix) 
+        return  sum ( str( t_dir.name ).startswith(p) for p in self.CONFIG.black_list_dirname_prefix) 
 
     def _check_config(self, file_option, default_path_name, check=True):
         try:
             # namedtuple
-            path_name = getattr( CONFIG.GLOBAL_CONFIG, file_option)[0]
+            path_name = getattr( self.CONFIG, file_option)
         except:
             path_name = Path.home() / f"{default_path_name}"
             print(C.red("[Warning]"))
@@ -63,6 +66,7 @@ class BaseAction(argparse.Action):
             if path.exists():
                 return path
             else:
+                Path(path).resolve().parent.mkdir()
                 Path(path).resolve().touch()
                 print(C.red("[File Not Found]"))
                 notice = f"{C.purple(str(path))}"
@@ -85,7 +89,6 @@ class BaseAction(argparse.Action):
         )
 
     def _deal_dependency(self, module_name):
-        from importlib import  import_module
         try:
             return import_module(module_name)
         except Exception as e:
@@ -121,9 +124,9 @@ class BaseAction(argparse.Action):
 
             map_str = f'map' \
                       f' ' \
-                      f'{CONFIG.GLOBAL_CONFIG.prefix_and_suffix_only_for_ranger[0]}' \
+                      f'{self.CONFIG.prefix_and_suffix_only_for_ranger[0]}' \
                       f'{file_name}' \
-                      f'{CONFIG.GLOBAL_CONFIG.prefix_and_suffix_only_for_ranger[1]}' \
+                      f'{self.CONFIG.prefix_and_suffix_only_for_ranger[1]}' \
                       f' ' \
                       f'cd' \
                       f' ' \
@@ -133,29 +136,29 @@ class BaseAction(argparse.Action):
             self.dirs_list.append( path_name )
 
     def _generate(self, path_obj_list, depth=0):
-        if depth > int(CONFIG.GLOBAL_CONFIG.recursion_depth[0]):
+        if depth > self.CONFIG.recursion_depth:
             return
         else:
             for per_dir in path_obj_list:
                 try:
-                    if per_dir.is_dir() and str(per_dir.name) not in CONFIG.GLOBAL_CONFIG.black_list_dirname and  self._judge_prefix(per_dir)==0:
+                    if per_dir.is_dir() and str(per_dir.name) not in self.CONFIG.black_list_dirname and  self._judge_prefix(per_dir)==0:
                         self._collect(per_dir)
                         self._generate( list(per_dir.iterdir()), depth+1)
                 except PermissionError:
                     ...
 
     def generate(self):
-        path_obj_list = [Path(d).resolve() for d in CONFIG.GLOBAL_CONFIG.recursion_root_list]
+        path_obj_list = [Path(d).resolve() for d in self.CONFIG.recursion_root_list]
         self._generate(path_obj_list, depth=0)
 
     def append_default_and_print(self,):
-        self.map_dict.update({}.fromkeys(CONFIG.GLOBAL_CONFIG.default_map_only_for_ranger))
+        self.map_dict.update({}.fromkeys(self.CONFIG.default_map_only_for_ranger))
         for map_str in self.map_dict.keys():
             print(map_str)
         print()
 
     def append_default_and_to_file(self,):
-        self.map_dict.update({}.fromkeys(CONFIG.GLOBAL_CONFIG.default_map_only_for_ranger))
+        self.map_dict.update({}.fromkeys(self.CONFIG.default_map_only_for_ranger))
         ranger_path = self._check_ranger_config()
         ranger_path.write_text( "\n".join(self.map_dict.keys())+"\n",encoding="utf-8")
         print(C.purple("[Write Completed]"))
@@ -164,8 +167,8 @@ class BaseAction(argparse.Action):
 
 class RemoveConfigAction(BaseAction):
     def _common_action(self):
-        config_path = (Path.home() / f'{CONFIG.CONFIG_NAME}')
-        if config_path.exists() and config_path.name == ".autowalk.py":
+        config_path = (Path.home() / f'{Config.CONFIG_NAME}')
+        if config_path.exists():
             config_path.unlink()
 
             print(C.purple("[Delete Completed]"))
@@ -205,7 +208,7 @@ class JumpBase(BaseAction):
 
         aj_cnofig_path = self._check_autojump_config()
         dirs_set = set(self.dirs_list)
-        user_define_weight = CONFIG.GLOBAL_CONFIG.weight_value_only_for_autojump[0]
+        user_define_weight = self.CONFIG.weight_value_only_for_autojump
 
         old_conf = aj_cnofig_path.read_text(encoding="utf-8").strip()
         old_file_name_set = set()
@@ -233,11 +236,11 @@ class JumpBase(BaseAction):
 
 class JumpListAction(JumpBase):
     def _common_action(self):
-        sp.run("autojump -s", stderr=sp.PIPE,shell=True, universal_newlines=True)
+        sp.run("autojump.bat -s", stderr=sp.PIPE,shell=True, universal_newlines=True)
 
 class JumpClearAction(JumpBase):
     def find_autojump_config(self,):
-        result = sp.run("autojump -s",stdout=sp.PIPE,stderr=sp.PIPE,shell=True, universal_newlines=True).stdout.split("\n")
+        result = sp.run("autojump.bat -s",stdout=sp.PIPE,stderr=sp.PIPE,shell=True, universal_newlines=True).stdout.split("\n")
         autojump_config_path = self._check_autojump_config()
 
         if Path(autojump_config_path).exists():
@@ -272,7 +275,7 @@ class JumpJunkCleanAction(JumpBase):
             with autojump_config_path.open() as f_before:
                 before_clean_line_set = set(f_before)
 
-            sp.run("autojump --purge",stdout=sp.PIPE,stderr=sp.PIPE,shell=True, universal_newlines=True).stdout
+            sp.run("autojump.bat --purge",stdout=sp.PIPE,stderr=sp.PIPE,shell=True, universal_newlines=True).stdout
 
             with autojump_config_path.open() as f_after:
                 after_clean_line_set = set(f_after)
@@ -292,7 +295,7 @@ class JumpJunkCleanAction(JumpBase):
                 print(f'\t{C.purple("total cleaned")}{C.red("│")} {C.green(count)}')
                 print(f'\t{C.purple("weight config")}{C.red("│")} {C.green(autojump_config_path.resolve())}')
         except:
-            print("\t"+C.purple(sp.run("autojump --purge",stdout=sp.PIPE,stderr=sp.PIPE,shell=True, universal_newlines=True).stdout))
+            print("\t"+C.purple(sp.run("autojump.bat --purge",stdout=sp.PIPE,stderr=sp.PIPE,shell=True, universal_newlines=True).stdout))
 
 
 class JumpCatConfigFile(BaseAction):
@@ -308,7 +311,7 @@ class IncrWeightAction(argparse._StoreAction):
             
             _cd = "cd /D" if "win" in sys.platform else "cd"
 
-            auto_jump_cmd = f'{_cd} "{file}" && autojump -a "{file}" && autojump -i {weight}'
+            auto_jump_cmd = f'{_cd} "{file}" && autojump.bat -a "{file}" && autojump.bat -i {weight}'
             result = sp.run(auto_jump_cmd,stdout=sp.PIPE,stderr=sp.PIPE,shell=True, universal_newlines=True)
             weight_filename = result.stdout.strip().split(":",1)
 
@@ -326,7 +329,7 @@ class DecrWeightAction(argparse._StoreAction):
             file, weight = values
             _cd = "cd /D" if "win" in sys.platform else "cd"
 
-            auto_jump_cmd = f'{_cd} "{file}" && autojump -a "{file}" && autojump -d {weight}'
+            auto_jump_cmd = f'{_cd} "{file}" && autojump.bat -a "{file}" && autojump.bat -d {weight}'
             result = sp.run(auto_jump_cmd,stdout=sp.PIPE,stderr=sp.PIPE,shell=True, universal_newlines=True)
             weight_filename = result.stdout.strip().split(":",1)
 
